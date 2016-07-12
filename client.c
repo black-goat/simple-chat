@@ -11,58 +11,34 @@
 #define MODE_SEND   0
 #define MODE_RECV   1
 
-void ReportError( int errorCode, const char* whichFunc );
-
-char* readLine( SOCKET s );
-int is_exit_string( char* str );
+const char* QUIT_STRING = "#quit";
 
 void init_winsock( WORD version );
-int get_host_info( LPHOSTENT hostInfo, int getHostBy, const char* host )
-{
-    if( getHostBy == HOST_BY_NAME )
-    {
-        hostInfo = gethostbyname( host );
-    }
-    else if( getHostBy == HOST_BY_ADDR )
-    {
-        IN_ADDR iaHost;
-        iaHost.s_addr = inet_addr( host );
-        hostInfo = gethostbyaddr( (const char*)iaHost.s_addr, sizeof( struct in_addr ), AF_INET );
-    }
-    else
-    {
-        MessageBox( NULL, "Error: No such command %d", "get_host_info() failed", 0 );
-    }
+void ReportError( int errorCode, const char* whichFunc );
 
-    printf( "%d\n", (hostInfo == NULL ) );
+int client();
+void start_message_loop( SOCKET theSocket );
 
-    if( !hostInfo )
-    {
-        int nret = WSAGetLastError();
-        switch( getHostBy )
-        {
-        case HOST_BY_NAME:
-            ReportError( nret, "gethostbyname()" );
-            break;
-        case HOST_BY_ADDR:
-            ReportError( nret, "gethostbyaddr()" );
-            break;
-        default:
-            MessageBox( NULL, "Invalid operation requested", "get_host_by() failed", 0 );
-            break;
-        }
+char* readLine( SOCKET s );
+int is_exit_string( const char* str );
+int is_quit_string( const char* str );
 
-        return -1;
-    }
-
-    return 0;
-}
 
 int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow )
 {
-    int nret; // Used for error reporting
-
     init_winsock( MAKEWORD( 2, 0 ) );
+
+    client();
+
+    system( "PAUSE" );
+
+	WSACleanup();
+	return NETWORK_OK;
+}
+
+int client()
+{
+    int nret; // Used for error reporting
 
     LPHOSTENT hostInfo;
     IN_ADDR iaHost;
@@ -77,7 +53,6 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
 		nret = WSAGetLastError();
 		ReportError(nret, "gethostbyname()");
 
-		WSACleanup();
 		return NETWORK_ERROR;
 	}
 
@@ -92,7 +67,6 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
 		nret = WSAGetLastError();
 		ReportError(nret, "socket()");
 
-		WSACleanup();
 		return NETWORK_ERROR;
 	}
 
@@ -113,13 +87,23 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
 		nret = WSAGetLastError();
 		ReportError(nret, "connect()");
 
-		WSACleanup();
 		return NETWORK_ERROR;
 	}
 
     char* message = readLine( theSocket );
     printf( "%s\n", message );
 
+    start_message_loop( theSocket );
+
+	closesocket( theSocket );
+
+	printf( "Disconnected from server.\n");
+
+	return NETWORK_OK;
+}
+
+void start_message_loop( SOCKET theSocket )
+{
     int mode = MODE_SEND;
 
     while( 1 )
@@ -141,6 +125,10 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
             {
                 mode = MODE_RECV;
             }
+            if( is_quit_string( buffer ) )
+            {
+                break;
+            }
         }
         else
         {
@@ -155,19 +143,24 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
         }
     }
 
-    system( "PAUSE" );
-
-	closesocket( theSocket );
-	WSACleanup();
-	return NETWORK_OK;
+    printf( "Thanks for coming!\n" );
 }
 
-int is_exit_string( char* str )
+int is_exit_string( const char* str )
 {
     if( str[0] == '$' && (str[1] == '\n' || str[1] == NULL ) )
         return 1;
     else
         return 0;
+}
+
+int is_quit_string( const char* str )
+{
+    if( strcmp( QUIT_STRING, str ) == 0 )
+        return 1;
+    else
+        return 0;
+
 }
 
 char* readLine( SOCKET s )

@@ -8,20 +8,20 @@
 #define MODE_SEND   0
 #define MODE_RECV   1
 
+const char* QUIT_STRING = "#quit";
+
+
+void init_winsock( WORD version );
 void ReportError( int errorCode, const char* whichFunc );
 
 char* readLine( SOCKET s );
 int is_exit_string( char* str );
+int is_quit_string( const char* str );
 
-int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow )
+void start_message_loop( SOCKET theSocket );
+int server()
 {
-    WORD sockVersion;
-    WSADATA wsaData;
-    int nret;
-
-    sockVersion = MAKEWORD(2, 0);
-
-    WSAStartup( sockVersion, &wsaData );
+    int nret; // Used for error reporting
 
     SOCKET listeningSocket;
 
@@ -56,8 +56,6 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
         return NETWORK_ERROR;
     }
 
-
-
     nret = listen( listeningSocket, 1 );
 
     if( nret == SOCKET_ERROR )
@@ -88,6 +86,33 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
     char welcomeMessage[] = "Welcome to the server!\n";
     send( theClient, welcomeMessage, strlen( welcomeMessage ), 0 );
 
+    start_message_loop( theClient );
+
+    closesocket( theClient );
+    closesocket( listeningSocket );
+
+    printf( "Disconnected.\n" );
+
+    return NETWORK_OK;
+}
+
+
+int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow )
+{
+
+
+    init_winsock( MAKEWORD( 2, 0) );
+
+    server();
+
+    system( "PAUSE" );
+
+    WSACleanup();
+    return NETWORK_OK;
+}
+
+void start_message_loop( SOCKET theSocket )
+{
     int mode = MODE_RECV;
 
     while( 1 )
@@ -104,16 +129,20 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
                 buffer[ pos ] = c;
                 ++pos;
             }while( c != '\n' );
-            send( theClient, buffer, strlen( buffer ), 0 );
+            send( theSocket, buffer, strlen( buffer ), 0 );
             if( is_exit_string( buffer ) )
             {
                 mode = MODE_RECV;
+            }
+            if( is_quit_string( buffer ) )
+            {
+                break;
             }
         }
         else
         {
             char* theMessage;
-            theMessage = readLine( theClient );
+            theMessage = readLine( theSocket );
             if( is_exit_string( theMessage ) )
             {
                 mode = MODE_SEND;
@@ -123,14 +152,19 @@ int WINAPI WinMain( HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow
         }
     }
 
-    closesocket( theClient );
-    closesocket( listeningSocket );
-
-    system( "PAUSE" );
-
-    WSACleanup();
-    return NETWORK_OK;
+    printf( "Thanks for coming!\n" );
 }
+
+
+void init_winsock( WORD version )
+{
+    WSADATA wsaData;
+
+    WSAStartup( version, &wsaData );
+
+    return;
+}
+
 
 char* readLine( SOCKET s )
 {
@@ -172,6 +206,15 @@ int is_exit_string( char* str )
         return 1;
     else
         return 0;
+}
+
+int is_quit_string( const char* str )
+{
+    if( strcmp( QUIT_STRING, str ) == 0 )
+        return 1;
+    else
+        return 0;
+
 }
 
 void ReportError( int errorCode, const char* whichFunc )
