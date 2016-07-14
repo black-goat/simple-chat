@@ -1,0 +1,36 @@
+# depslib dependency file v1.0
+1468525045 source:d:\c++\chat 2.0\simple-chat\client.c
+	<windows.h>
+	<winsock2.h>
+	<stdio.h>
+	"shared.h"
+	"client.h"
+
+1468520956 d:\c++\chat 2.0\simple-chat\shared.h
+	<windows.h>
+
+1468520544 d:\c++\chat 2.0\simple-chat\client.h
+
+1468522908 source:d:\c++\chat 2.0\simple-chat\main.c
+	<windows.h>
+	<winsock2.h>
+	<stdio.h>
+	"shared.h"
+	"server.h"
+	"client.h"
+
+1468521041 d:\c++\chat 2.0\simple-chat\server.h
+
+1468525030 source:d:\c++\chat 2.0\simple-chat\server.c
+	<windows.h>
+	<winsock2.h>
+	<stdio.h>
+	"shared.h"
+	"server.h"
+
+1468524065 source:d:\c++\chat 2.0\simple-chat\shared.c
+	"shared.h"
+	<windows.h>
+	<stdio.h>
+	<string.h>
+
